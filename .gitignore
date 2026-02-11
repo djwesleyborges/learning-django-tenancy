@@ -142,3 +142,5 @@ staticfiles/
 
 # Frontend - não ignorar src/lib
 # frontend/src/lib/
+apps/core/migrations/
+apps/tasks/migrations/

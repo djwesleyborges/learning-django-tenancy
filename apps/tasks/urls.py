@@ -1,8 +1,8 @@
 from django.urls import path
-from apps.core.views import tenant_home
+from . import views
 
 app_name = 'tasks'
 
 urlpatterns = [
-    path('', tenant_home, name='tenant_home'),
+    path('', views.project_list, name='project_list'),
 ]

@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div style="margin: 24px; font-size: 24px">
+        <h1>{{ request.tenant.name }}'s Projects</h1>
+        {% if projects %}
+            <p>Total Projects Found: <strong>{{ projects|length }}</strong></p>
+
+            {% for project in projects %}
+                <p>{{ project.name }}</p>
+            {% endfor %}
+            
+        {% else %}
+            <p>No projects found.</p>
+        {% endif %}
+    </div>
+{% endblock %}
