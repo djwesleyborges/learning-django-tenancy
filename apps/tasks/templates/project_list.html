@@ -3,6 +3,9 @@
 {% block content %}
     <div style="margin: 24px; font-size: 24px">
         <h1>{{ request.tenant.name }}'s Projects</h1>
+
+        <a href="{% url 'tasks:project_create' %}">Create Project</a>
+
         {% if projects %}
             <p>Total Projects Found: <strong>{{ projects|length }}</strong></p>
 
