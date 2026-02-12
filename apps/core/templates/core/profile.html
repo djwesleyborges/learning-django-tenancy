@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Perfil - Django Tenancy</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 50px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .profile-card { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .btn { padding: 8px 16px; border-radius: 4px; text-decoration: none; color: white; }
+        .btn-primary { background: #007cba; }
+        .btn-danger { background: #dc3545; }
+        .btn:hover { opacity: 0.8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Perfil do Usuário</h2>
+        
+        <div class="profile-card">
+            <h3>Informações do Usuário</h3>
+            <p><strong>Usuário:</strong> {{ user.username }}</p>
+            <p><strong>Email:</strong> {{ user.email }}</p>
+            <p><strong>Nome:</strong> {{ user.get_full_name|default:"Não informado" }}</p>
+            <p><strong>Tenant:</strong> {{ user.tenant.name|default:"Não associado" }}</p>
+            <p><strong>Data de Cadastro:</strong> {{ user.date_joined|date:"d/m/Y H:i" }}</p>
+            <p><strong>Último Login:</strong> {{ user.last_login|date:"d/m/Y H:i"|default:"Nunca" }}</p>
+        </div>
+        
+        <div>
+            <a href="{% url 'tasks:project_list' %}" class="btn btn-primary">Ir para Projetos</a>
+            <a href="{% url 'core:logout' %}" class="btn btn-danger">Sair</a>
+        </div>
+    </div>
+</body>
+</html>
