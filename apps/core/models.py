@@ -14,4 +14,7 @@ class Domain(DomainMixin):
 
 
 class User(AbstractUser):
-    pass
+    tenant = models.ForeignKey(Client, on_delete=models.CASCADE, null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.username} ({self.tenant.name if self.tenant else 'Sem Tenant'})"

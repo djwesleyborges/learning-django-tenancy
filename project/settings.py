@@ -152,4 +152,9 @@ AUTH_USER_MODEL = 'core.User'
 
 TENANT_MODEL = "core.Client" # app.Model
 
+# AUTH CONFIGURATION
+LOGIN_URL = 'core:login'
+LOGIN_REDIRECT_URL = 'tasks:project_list'
+LOGOUT_REDIRECT_URL = 'core:login'
+
 TENANT_DOMAIN_MODEL = "core.Domain"  # app.Model

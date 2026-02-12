@@ -22,6 +22,7 @@ from django_tenants.middleware import TenantMainMiddleware
 # URLs públicas (schema public)
 public_patterns = [
     path('admin/', admin.site.urls),
+    path('auth/', include('apps.core.urls')),
     path('', include('apps.tasks.urls')),
 ]
 
