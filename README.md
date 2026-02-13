@@ -78,6 +78,74 @@ python manage.py createsuperuser
 python manage.py migrate_schemas
 ```
 
+### 5. Configurar Tenant Público (OBRIGATÓRIO)
+Após criar o banco e superusuário, é necessário criar um tenant público para o domínio localhost:
+
+#### Via Shell Django:
+```bash
+python manage.py shell -c "
+from apps.core.models import Client, Domain
+
+# Criar tenant público
+public_tenant = Client.objects.create(
+    name='Public',
+    schema_name='public'
+)
+
+# Criar domínio para localhost
+domain = Domain.objects.create(
+    domain='localhost',
+    tenant=public_tenant,
+    is_primary=True
+)
+
+print('Tenant público criado:', public_tenant)
+print('Domínio criado:', domain)
+"
+```
+
+#### Via Script (Recomendado para desenvolvimento):
+```bash
+# Criar script de setup
+cat > setup_tenant.py << 'EOF'
+from apps.core.models import Client, Domain
+
+def setup_public_tenant():
+    """Cria tenant público para desenvolvimento local"""
+    try:
+        # Verificar se já existe
+        if Domain.objects.filter(domain='localhost').exists():
+            print('Tenant localhost já configurado!')
+            return
+        
+        # Criar tenant público
+        public_tenant = Client.objects.create(
+            name='Public',
+            schema_name='public'
+        )
+        
+        # Criar domínio para localhost
+        domain = Domain.objects.create(
+            domain='localhost',
+            tenant=public_tenant,
+            is_primary=True
+        )
+        
+        print('✅ Tenant público criado com sucesso!')
+        print(f'   Tenant: {public_tenant.name}')
+        print(f'   Domínio: {domain.domain}')
+        
+    except Exception as e:
+        print(f'❌ Erro ao criar tenant: {e}')
+
+if __name__ == '__main__':
+    setup_public_tenant()
+EOF
+
+# Executar script
+python manage.py shell < setup_tenant.py
+```
+
 ## 🏃‍♂️ Executando a Aplicação
 
 ```bash
