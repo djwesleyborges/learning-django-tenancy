@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { projectsApi, type ProjectCreate } from '../utils/projectsApi';
 
 const ProjectCreate = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProjectCreate>({
     name: '',
     description: '',
     is_completed: false
@@ -25,22 +27,12 @@ const ProjectCreate = () => {
     setLoading(true);
     
     try {
-      // TODO: Implement API call to create project
-      const response = await fetch('/api/projects/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      if (response.ok) {
-        navigate('/projects');
-      } else {
-        setError('Failed to create project');
-      }
-    } catch (err) {
-      setError('Failed to create project. Please try again.');
+      const project = await projectsApi.create(formData);
+      toast.success('Projeto criado com sucesso!');
+      navigate('/');  // Redirecionar para Home
+    } catch (err: any) {
+      setError(err.message || 'Failed to create project. Please try again.');
+      toast.error('Falha ao criar projeto. Tente novamente.');
     } finally {
       setLoading(false);
     }
@@ -114,7 +106,7 @@ const ProjectCreate = () => {
             <div className="flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => navigate('/projects')}
+                onClick={() => navigate('/')}
                 className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Cancel

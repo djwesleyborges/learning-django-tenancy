@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import type { Project } from '../types';
+import { projectsApi, type Project } from '../utils/projectsApi';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -8,32 +8,10 @@ const ProjectList = () => {
   const { user, tenant } = useAuth();
 
   useEffect(() => {
-    // TODO: Implement API call to fetch projects
     const fetchProjects = async () => {
       try {
-        // Mock data for now
-        const mockProjects: Project[] = [
-          {
-            id: 1,
-            name: 'Sample Project 1',
-            description: 'This is a sample project description',
-            is_completed: false,
-            created_at: '2024-01-15T10:30:00Z',
-            updated_at: '2024-01-15T10:30:00Z',
-            tasks: []
-          },
-          {
-            id: 2,
-            name: 'Sample Project 2',
-            description: 'Another sample project with more details',
-            is_completed: true,
-            created_at: '2024-01-10T14:20:00Z',
-            updated_at: '2024-01-12T09:15:00Z',
-            tasks: []
-          }
-        ];
-        
-        setProjects(mockProjects);
+        const projectsData = await projectsApi.list();
+        setProjects(projectsData);
       } catch (error) {
         console.error('Failed to fetch projects:', error);
       } finally {

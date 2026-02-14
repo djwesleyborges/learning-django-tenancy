@@ -1,4 +1,5 @@
 from django.db import models
+from django_tenants.models import TenantMixin
 
 class Project(models.Model):
     name = models.CharField(max_length=100)

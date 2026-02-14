@@ -177,7 +177,7 @@ LOGIN_REDIRECT_URL = '/'
 # Configuração para produção - altere conforme necessário
 CORS_ALLOWED_ORIGINS = [
     origin.strip() 
-    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') 
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,http://usuario.localhost:5173').split(',') 
     if origin.strip()
 ]
 CORS_ALLOW_CREDENTIALS = True
@@ -188,6 +188,18 @@ CORS_ALLOW_HEADERS = [
     'content-type',
     'authorization',
     'x-csrftoken',
-    'csrf-token',
+    'accept',
+    'accept-language',
+    'content-language',
 ]
+
+CORS_ALLOW_METHODS = [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+]
+
 LOGOUT_REDIRECT_URL = 'login'

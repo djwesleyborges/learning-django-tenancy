@@ -386,9 +386,9 @@ def get_tenant_info_jwt(request):
 
 
 @router.post("/logout-jwt", response=dict)
-def logout_jwt_endpoint():
+def logout_jwt_endpoint(request):
     """Endpoint de logout JWT (stateless - apenas informativo)"""
     return {
         "success": True,
-        "message": "Para fazer logout, remova o token do lado do cliente"
+        "message": "Logout realizado com sucesso"
     }
