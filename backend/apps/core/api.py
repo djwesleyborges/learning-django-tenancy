@@ -36,13 +36,20 @@ class UserResponseSchema(Schema):
     
     @staticmethod
     def resolve_tenant(obj):
-        if hasattr(obj, 'tenant') and obj.tenant:
+        # Se o tenant já for um dicionário, retorne-o diretamente
+        if isinstance(obj.tenant, dict):
+            return obj.tenant
+            
+        # Se for um objeto tenant, serialize-o
+        if hasattr(obj, 'tenant') and obj.tenant and not isinstance(obj.tenant, dict):
             return {
                 "id": obj.tenant.id,
                 "name": obj.tenant.name,
                 "schema_name": obj.tenant.schema_name
             }
-        return None
+        
+        # Se chegou aqui com tenant=None, mantenha None (não sobrescreva)
+        return obj.tenant if hasattr(obj, 'tenant') else None
 
 
 class AuthResponseSchema(Schema):
@@ -84,11 +91,13 @@ def login_endpoint(request, payload: LoginSchema):
         if user is not None:
             login(request, user)
             
-            # Determinar URL de redirecionamento
+            # Recarregar usuário com o tenant para garantir que o relacionamento seja carregado
+            user = User.objects.select_related('tenant').get(id=user.id)
+            
+            # Determinar URL de redirecionamento para o frontend
             redirect_url = None
             if user.tenant:
-                redirect_url = get_tenant_redirect_url(user)
-            
+                redirect_url = get_tenant_redirect_url(user, for_api=True)
             return AuthResponseSchema(
                 success=True,
                 message="Login realizado com sucesso",
@@ -151,8 +160,11 @@ def register_endpoint(request, payload: RegisterSchema):
         # Autenticar usuário após registro
         login(request, user)
         
-        # Determinar URL de redirecionamento
-        redirect_url = get_tenant_redirect_url(user)
+        # Recarregar usuário com o tenant para garantir que o relacionamento seja carregado
+        user = User.objects.select_related('tenant').get(id=user.id)
+        
+        # Determinar URL de redirecionamento para o frontend
+        redirect_url = get_tenant_redirect_url(user, for_api=True)
         
         return AuthResponseSchema(
             success=True,
@@ -216,7 +228,7 @@ def check_authentication(request):
                 "id": request.user.tenant.id,
                 "name": request.user.tenant.name,
                 "schema_name": request.user.tenant.schema_name,
-                "redirect_url": get_tenant_redirect_url(request.user)
+                "redirect_url": get_tenant_redirect_url(request.user, for_api=True)
             }
     
     return response_data
@@ -244,6 +256,6 @@ def get_tenant_info(request):
             "name": request.user.tenant.name,
             "schema_name": request.user.tenant.schema_name,
             "created_on": request.user.tenant.created_on,
-            "redirect_url": get_tenant_redirect_url(request.user)
+            "redirect_url": get_tenant_redirect_url(request.user, for_api=True)
         }
     }

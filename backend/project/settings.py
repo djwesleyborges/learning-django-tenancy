@@ -187,5 +187,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'content-type',
     'authorization',
+    'x-csrftoken',
+    'csrf-token',
 ]
 LOGOUT_REDIRECT_URL = 'login'

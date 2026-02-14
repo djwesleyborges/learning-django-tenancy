@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { register, type RegisterData } from '../utils/api';
 
 const Register = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterData>({
     username: '',
     email: '',
     password: '',
-    password2: '',
-    organization: ''
+    password_confirm: '',
+    organization: '',
+    first_name: '',
+    last_name: ''
   });
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,29 +26,30 @@ const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsLoading(true);
     
-    if (formData.password !== formData.password2) {
-      setError('Passwords do not match');
+    if (formData.password !== formData.password_confirm) {
+      setError('As senhas não coincidem');
+      setIsLoading(false);
       return;
     }
     
     try {
-      // TODO: Implement API call to register
-      const response = await fetch('/api/register/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await register(formData);
       
-      if (response.ok) {
-        navigate('/login');
+      if (response.success) {
+        // Se houver redirect_url, a função register já redirecionou
+        if (!response.redirect_url) {
+          // Redirecionamento fallback para desenvolvimento
+          navigate('/login');
+        }
       } else {
-        setError('Registration failed');
+        setError(response.message || 'Falha no registro');
       }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError('Falha no registro. Tente novamente.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -113,13 +118,13 @@ const Register = () => {
             </div>
             <div>
               <input
-                id="password2"
-                name="password2"
+                id="password_confirm"
+                name="password_confirm"
                 type="password"
                 required
                 className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 placeholder="Confirm password"
-                value={formData.password2}
+                value={formData.password_confirm}
                 onChange={handleChange}
               />
             </div>
@@ -128,9 +133,10 @@ const Register = () => {
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Sign up
+              {isLoading ? 'Creating account...' : 'Sign up'}
             </button>
           </div>
 

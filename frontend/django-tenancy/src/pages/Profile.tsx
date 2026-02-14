@@ -1,10 +1,17 @@
-import type { User } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
-interface ProfileProps {
-  user: User;
-}
+const Profile = () => {
+  const { user } = useAuth();
 
-const Profile = ({ user }: ProfileProps) => {
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto py-6 px-4">
+        <div className="text-center">
+          <p className="text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-2xl mx-auto py-6 px-4">
       <div className="bg-white shadow rounded-lg">

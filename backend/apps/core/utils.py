@@ -23,18 +23,25 @@ def create_tenant_with_domain(organization_name, user):
     
     return tenant, domain
 
-def get_tenant_redirect_url(user):
+def get_tenant_redirect_url(user, for_api=False):
     """
     Retorna a URL de redirecionamento para o tenant do usuário
+    Se for_api=True, retorna URL para o frontend React
+    Se for_api=False, retorna URL para views do Django (comportamento original)
     """
     if user.tenant:
         try:
-            if user.is_authenticated:
-                domain = Domain.objects.get(tenant=user.tenant, is_primary=True)
-                return f"http://{domain.domain}:8000/"
+            domain = Domain.objects.get(tenant=user.tenant, is_primary=True)
+            
+            if for_api:
+                # Retornar URL para o frontend React
+                return f"http://{domain.domain}:5173/projects"
             else:
-                domain = Domain.objects.get(tenant=user.tenant, is_primary=True)
-                return f"http://{domain.domain}:8000/auth/login/"
+                # Comportamento original: redirecionar para views Django
+                if user.is_authenticated:
+                    return f"http://{domain.domain}:8000/"
+                else:
+                    return f"http://{domain.domain}:8000/auth/login/"
         except Domain.DoesNotExist:
-            return '/auth/login/'
-    return '/auth/login/'
+            return '/auth/login/' if not for_api else '/login'
+    return '/auth/login/' if not for_api else '/login'

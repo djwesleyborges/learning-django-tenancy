@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth';
 import type { Project } from '../types';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tenantName, setTenantName] = useState('');
+  const { user, tenant } = useAuth();
 
   useEffect(() => {
     // TODO: Implement API call to fetch projects
@@ -33,7 +34,6 @@ const ProjectList = () => {
         ];
         
         setProjects(mockProjects);
-        setTenantName('Sample Organization');
       } catch (error) {
         console.error('Failed to fetch projects:', error);
       } finally {
@@ -56,7 +56,7 @@ const ProjectList = () => {
     <div className="max-w-6xl mx-auto py-6 px-4">
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {tenantName}'s Projects
+          {tenant?.name || user?.username}'s Projects
         </h1>
         <a
           href="/projects/create"
