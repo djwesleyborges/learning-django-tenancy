@@ -63,28 +63,45 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleLogin = async (data: LoginData): Promise<JWTAuthResponse> => {
     try {
+      console.log('🚀 Iniciando login...');
       const response = await loginJWT(data);
+      console.log('📥 Resposta do login:', response);
       
       if (response.success) {
+        console.log('✅ Login successful, atualizando estado...');
         setUser(response.user);
         if (response.user?.tenant) {
           setTenant(response.user.tenant);
         }
         setIsAuthenticated(true);
         
-        // Usar redirect_url da API se disponível, senão redirecionar para /projects
+        console.log('🔄 Verificando redirecionamento...');
+        console.log('redirect_url:', response.redirect_url);
+        
+        // Usar redirect_url da API se disponível, senão redirecionar para /
         if (response.redirect_url) {
-          // Extrair o caminho da URL (ex: http://tenant.localhost:3000/projects -> /projects)
+          console.log('🔗 Redirecionando para URL da API:', response.redirect_url);
+          // Verificar se é URL base (termina com /) ou pathname específico
           const url = new URL(response.redirect_url);
-          navigate(url.pathname);
+          console.log('📍 Path extraído:', url.pathname);
+          
+          // Se o pathname for vazio ou apenas "/", redirecionar para Home (/)
+          if (!url.pathname || url.pathname === '/') {
+            console.log('🏠 URL base detectada, redirecionando para Home (/)');
+            navigate('/');  // Redirecionar para Home
+          } else {
+            console.log('📂 Path específico detectado, redirecionando para:', url.pathname);
+            navigate(url.pathname);  // Redirecionar para pathname específico
+          }
         } else {
-          navigate('/projects');
+          console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
+          navigate('/');  // Redirecionar para Home
         }
       }
       
       return response;
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       throw error;
     }
   };
@@ -102,13 +119,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         setIsAuthenticated(true);
         
-        // Usar redirect_url da API se disponível, senão redirecionar para /projects
+        // Usar redirect_url da API se disponível, senão redirecionar para /
         if (response.redirect_url) {
-          // Extrair o caminho da URL (ex: http://tenant.localhost:3000/projects -> /projects)
+          console.log('🔗 Redirecionando para URL da API:', response.redirect_url);
+          // Verificar se é URL base (termina com /) ou pathname específico
           const url = new URL(response.redirect_url);
-          navigate(url.pathname);
+          console.log('📍 Path extraído:', url.pathname);
+          
+          // Se o pathname for vazio ou apenas "/", redirecionar para Home (/)
+          if (!url.pathname || url.pathname === '/') {
+            console.log('🏠 URL base detectada, redirecionando para Home (/)');
+            navigate('/');  // Redirecionar para Home
+          } else {
+            console.log('📂 Path específico detectado, redirecionando para:', url.pathname);
+            navigate(url.pathname);  // Redirecionar para pathname específico
+          }
         } else {
-          navigate('/projects');
+          console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
+          navigate('/');  // Redirecionar para Home
         }
       }
       

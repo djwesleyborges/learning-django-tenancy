@@ -67,8 +67,11 @@ let accessToken: string | null = null;
 
 // Salvar e recuperar token do localStorage
 const saveToken = (token: string) => {
+  console.log('💾 saveToken chamado com:', token.substring(0, 20) + '...');
   accessToken = token;
   localStorage.setItem('access_token', token);
+  console.log('✅ Token salvo no localStorage');
+  console.log('📍 accessToken definido:', !!accessToken);
 };
 
 const getToken = (): string | null => {
@@ -118,6 +121,9 @@ export const getCSRFToken = async (): Promise<string> => {
 // Login JWT (recomendado)
 export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
   try {
+    console.log('🔐 Fazendo requisição JWT para:', `${API_BASE_URL}/auth/login-jwt`);
+    console.log('📤 Dados do login:', data);
+    
     const response = await fetch(`${API_BASE_URL}/auth/login-jwt`, {
       method: 'POST',
       headers: {
@@ -127,14 +133,17 @@ export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
     });
 
     const result = await response.json();
+    console.log('📥 Resposta da API:', result);
     
     if (result.success && result.access_token) {
+      console.log('💾 Salvando token...');
       saveToken(result.access_token);
+      console.log('✅ Token salvo com sucesso!');
     }
     
     return result;
   } catch (error) {
-    console.error('JWT Login error:', error);
+    console.error('❌ JWT Login error:', error);
     throw error;
   }
 };

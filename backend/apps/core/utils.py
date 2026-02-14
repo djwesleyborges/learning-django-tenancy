@@ -35,7 +35,7 @@ def get_tenant_redirect_url(user, for_api=False):
             
             if for_api:
                 # Retornar URL para o frontend React
-                return f"http://{domain.domain}:5173/projects"
+                return f"http://{domain.domain}:5173/"
             else:
                 # Comportamento original: redirecionar para views Django
                 if user.is_authenticated:
