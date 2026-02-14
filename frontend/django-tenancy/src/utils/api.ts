@@ -20,6 +20,29 @@ export interface AuthResponse {
   };
   redirect_url?: string;
   csrf_token?: string;
+  access_token?: string;
+}
+
+// Interface para respostas JWT
+export interface JWTAuthResponse {
+  success: boolean;
+  message: string;
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    id: number;
+    username: string;
+    email: string;
+    first_name: string;
+    last_name: string;
+    tenant?: {
+      id: number;
+      name: string;
+      schema_name: string;
+    };
+  };
+  redirect_url?: string;
 }
 
 // Interface para dados de login
@@ -39,7 +62,28 @@ export interface RegisterData {
   last_name?: string;
 }
 
-// Gerenciar token CSRF
+// Gerenciar token JWT
+let accessToken: string | null = null;
+
+// Salvar e recuperar token do localStorage
+const saveToken = (token: string) => {
+  accessToken = token;
+  localStorage.setItem('access_token', token);
+};
+
+const getToken = (): string | null => {
+  if (!accessToken) {
+    accessToken = localStorage.getItem('access_token');
+  }
+  return accessToken;
+};
+
+const removeToken = () => {
+  accessToken = null;
+  localStorage.removeItem('access_token');
+};
+
+// Gerenciar token CSRF (manter para compatibilidade)
 let csrfToken: string | null = null;
 
 // Obter token CSRF
@@ -71,7 +115,105 @@ export const getCSRFToken = async (): Promise<string> => {
   return '';
 };
 
-// Login
+// Login JWT (recomendado)
+export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/login-jwt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    
+    if (result.success && result.access_token) {
+      saveToken(result.access_token);
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('JWT Login error:', error);
+    throw error;
+  }
+};
+
+// Verificar autenticação JWT
+export const checkAuthJWT = async (): Promise<{
+  is_authenticated: boolean;
+  user?: any;
+  tenant_info?: any;
+}> => {
+  const token = getToken();
+  
+  if (!token) {
+    return { is_authenticated: false };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/check-auth-jwt`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    } else {
+      // Token inválido, remover
+      removeToken();
+      return { is_authenticated: false };
+    }
+  } catch (error) {
+    console.error('Check JWT auth error:', error);
+    return { is_authenticated: false };
+  }
+};
+
+// Obter perfil JWT
+export const getProfileJWT = async (): Promise<any> => {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('No token available');
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/profile-jwt`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (response.ok) {
+      return await response.json();
+    } else {
+      throw new Error('Failed to fetch profile');
+    }
+  } catch (error) {
+    console.error('Get JWT profile error:', error);
+    throw error;
+  }
+};
+
+// Logout JWT
+export const logoutJWT = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/logout-jwt`, {
+      method: 'POST',
+    });
+
+    removeToken(); // Remover token do lado do cliente
+    
+    return await response.json();
+  } catch (error) {
+    console.error('JWT Logout error:', error);
+    // Remover token mesmo em caso de erro
+    removeToken();
+    throw error;
+  }
+};
 export const login = async (data: LoginData): Promise<AuthResponse> => {
   const token = await getCSRFToken();
   

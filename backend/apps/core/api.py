@@ -5,8 +5,10 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import AnonymousUser
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
+from django.conf import settings
 from .models import User, Client
 from .utils import create_tenant_with_domain, get_tenant_redirect_url
+from .jwt_utils import generate_jwt_token, JWTAuth
 
 router = Router(tags=["Authentication"])
 
@@ -58,6 +60,18 @@ class AuthResponseSchema(Schema):
     user: Optional[UserResponseSchema] = None
     redirect_url: Optional[str] = None
     csrf_token: Optional[str] = None
+    access_token: Optional[str] = None  # Novo campo para JWT
+
+
+class JWTAuthResponseSchema(Schema):
+    """Schema específico para respostas JWT"""
+    success: bool
+    message: str
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int  # Tempo em segundos
+    user: UserResponseSchema
+    redirect_url: Optional[str] = None
 
 
 class TokenAuth(HttpBearer):
@@ -81,19 +95,19 @@ def get_csrf_token(request):
 
 @router.post("/login", response=AuthResponseSchema)
 def login_endpoint(request, payload: LoginSchema):
-    """Endpoint de login"""
+    """Endpoint de login (session-based)"""
     try:
         user = authenticate(
             username=payload.username,
             password=payload.password
         )
-        
+
         if user is not None:
             login(request, user)
-            
+
             # Recarregar usuário com o tenant para garantir que o relacionamento seja carregado
             user = User.objects.select_related('tenant').get(id=user.id)
-            
+
             # Determinar URL de redirecionamento para o frontend
             redirect_url = None
             if user.tenant:
@@ -110,11 +124,59 @@ def login_endpoint(request, payload: LoginSchema):
                 success=False,
                 message="Credenciais inválidas"
             )
-            
+
     except Exception as e:
         return AuthResponseSchema(
             success=False,
             message=f"Erro ao realizar login: {str(e)}"
+        )
+
+
+@router.post("/login-jwt", response=JWTAuthResponseSchema)
+def login_jwt_endpoint(request, payload: LoginSchema):
+    """Endpoint de login JWT (recomendado para APIs)"""
+    try:
+        user = authenticate(
+            username=payload.username,
+            password=payload.password
+        )
+        
+        if user is not None:
+            # Recarregar usuário com o tenant para garantir que o relacionamento seja carregado
+            user = User.objects.select_related('tenant').get(id=user.id)
+            
+            # Gerar token JWT
+            access_token = generate_jwt_token(user)
+            
+            # Determinar URL de redirecionamento para o frontend
+            redirect_url = None
+            if user.tenant:
+                redirect_url = get_tenant_redirect_url(user, for_api=True)
+            
+            return JWTAuthResponseSchema(
+                success=True,
+                message="Login realizado com sucesso",
+                access_token=access_token,
+                expires_in=86400,  # 24 horas em segundos
+                user=UserResponseSchema.from_orm(user),
+                redirect_url=redirect_url
+            )
+        else:
+            return JWTAuthResponseSchema(
+                success=False,
+                message="Credenciais inválidas",
+                access_token="",
+                expires_in=0,
+                user=None
+            )
+            
+    except Exception as e:
+        return JWTAuthResponseSchema(
+            success=False,
+            message=f"Erro ao realizar login: {str(e)}",
+            access_token="",
+            expires_in=0,
+            user=None
         )
 
 
@@ -197,53 +259,44 @@ def logout_endpoint(request):
         }
 
 
-@router.get("/profile", response=UserResponseSchema)
-def get_profile(request):
-    """Endpoint para obter perfil do usuário logado"""
-    if isinstance(request.user, AnonymousUser):
-        return JsonResponse(
-            {"error": "Usuário não autenticado"},
-            status=401
-        )
-    
-    return UserResponseSchema.from_orm(request.user)
+# Criar instância do autenticador JWT
+jwt_auth = JWTAuth()
 
 
-@router.get("/check-auth", response=dict)
-def check_authentication(request):
-    """Endpoint para verificar se usuário está autenticado"""
-    is_authenticated = not isinstance(request.user, AnonymousUser)
+@router.get("/profile-jwt", response=UserResponseSchema, auth=jwt_auth)
+def get_profile_jwt(request):
+    """Endpoint para obter perfil do usuário logado via JWT"""
+    return UserResponseSchema.from_orm(request.auth)
+
+
+@router.get("/check-auth-jwt", response=dict, auth=jwt_auth)
+def check_authentication_jwt(request):
+    """Endpoint para verificar se usuário está autenticado via JWT"""
+    user = request.auth
     
     response_data = {
-        "is_authenticated": is_authenticated,
-        "csrf_token": get_token(request) if is_authenticated else None
+        "is_authenticated": True,
+        "user": UserResponseSchema.from_orm(user).dict()
     }
     
-    if is_authenticated:
-        response_data["user"] = UserResponseSchema.from_orm(request.user).dict()
-        
-        # Adicionar informações do tenant
-        if request.user.tenant:
-            response_data["tenant_info"] = {
-                "id": request.user.tenant.id,
-                "name": request.user.tenant.name,
-                "schema_name": request.user.tenant.schema_name,
-                "redirect_url": get_tenant_redirect_url(request.user, for_api=True)
-            }
+    # Adicionar informações do tenant
+    if user.tenant:
+        response_data["tenant_info"] = {
+            "id": user.tenant.id,
+            "name": user.tenant.name,
+            "schema_name": user.tenant.schema_name,
+            "redirect_url": get_tenant_redirect_url(user, for_api=True)
+        }
     
     return response_data
 
 
-@router.get("/tenant-info", response=dict)
-def get_tenant_info(request):
-    """Endpoint para obter informações do tenant atual"""
-    if isinstance(request.user, AnonymousUser):
-        return JsonResponse(
-            {"error": "Usuário não autenticado"},
-            status=401
-        )
+@router.get("/tenant-info-jwt", response=dict, auth=jwt_auth)
+def get_tenant_info_jwt(request):
+    """Endpoint para obter informações do tenant atual via JWT"""
+    user = request.auth
     
-    if not request.user.tenant:
+    if not user.tenant:
         return {
             "has_tenant": False,
             "message": "Usuário não possui tenant associado"
@@ -252,10 +305,19 @@ def get_tenant_info(request):
     return {
         "has_tenant": True,
         "tenant": {
-            "id": request.user.tenant.id,
-            "name": request.user.tenant.name,
-            "schema_name": request.user.tenant.schema_name,
-            "created_on": request.user.tenant.created_on,
-            "redirect_url": get_tenant_redirect_url(request.user, for_api=True)
+            "id": user.tenant.id,
+            "name": user.tenant.name,
+            "schema_name": user.tenant.schema_name,
+            "created_on": user.tenant.created_on,
+            "redirect_url": get_tenant_redirect_url(user, for_api=True)
         }
+    }
+
+
+@router.post("/logout-jwt", response=dict)
+def logout_jwt_endpoint():
+    """Endpoint de logout JWT (stateless - apenas informativo)"""
+    return {
+        "success": True,
+        "message": "Para fazer logout, remova o token do lado do cliente"
     }

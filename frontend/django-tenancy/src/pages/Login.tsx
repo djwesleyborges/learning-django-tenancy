@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { login, type LoginData } from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
+import type { LoginData } from '../utils/api';
 
 const Login = () => {
   const [formData, setFormData] = useState<LoginData>({
@@ -9,7 +9,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -24,16 +24,11 @@ const Login = () => {
     setIsLoading(true);
     
     try {
-      debugger
       const response = await login(formData);
-      debugger
       
       if (response.success) {
-        // Se houver redirect_url, a função login já redirecionou
-        if (!response.redirect_url) {
-          // Redirecionamento fallback para desenvolvimento
-          navigate('/projects');
-        }
+        // O hook useAuth já gerencia o redirecionamento automaticamente
+        // Não precisa fazer nada aqui
       } else {
         setError(response.message || 'Credenciais inválidas');
       }

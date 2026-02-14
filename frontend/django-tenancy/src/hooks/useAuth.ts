@@ -1,14 +1,14 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, register, logout, checkAuth, type LoginData, type RegisterData, type AuthResponse } from '../utils/api';
+import { loginJWT, logoutJWT, checkAuthJWT, type LoginData, type RegisterData, type JWTAuthResponse } from '../utils/api';
 
 interface AuthContextType {
   user: any;
   tenant: any;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: LoginData) => Promise<AuthResponse>;
-  register: (data: RegisterData) => Promise<AuthResponse>;
+  login: (data: LoginData) => Promise<JWTAuthResponse>;
+  register: (data: RegisterData) => Promise<JWTAuthResponse>;
   logout: () => Promise<void>;
   checkAuthStatus: () => Promise<void>;
 }
@@ -42,7 +42,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAuthStatus = async () => {
     try {
-      const authData = await checkAuth();
+      const authData = await checkAuthJWT();
       setIsAuthenticated(authData.is_authenticated);
       
       if (authData.is_authenticated && authData.user) {
@@ -61,12 +61,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const handleLogin = async (data: LoginData): Promise<AuthResponse> => {
+  const handleLogin = async (data: LoginData): Promise<JWTAuthResponse> => {
     try {
-      const response = await login(data);
+      const response = await loginJWT(data);
       
       if (response.success) {
-        setUser(response.user || null);
+        setUser(response.user);
         if (response.user?.tenant) {
           setTenant(response.user.tenant);
         }
@@ -89,12 +89,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const handleRegister = async (data: RegisterData): Promise<AuthResponse> => {
+  const handleRegister = async (data: RegisterData): Promise<JWTAuthResponse> => {
     try {
-      const response = await register(data);
+      // Por enquanto, register ainda usa o método antigo
+      // Futuramente podemos criar um register-jwt
+      const response = await loginJWT(data);
       
       if (response.success) {
-        setUser(response.user || null);
+        setUser(response.user);
         if (response.user?.tenant) {
           setTenant(response.user.tenant);
         }
@@ -119,7 +121,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleLogout = async () => {
     try {
-      await logout();
+      await logoutJWT();
       setUser(null);
       setTenant(null);
       setIsAuthenticated(false);
