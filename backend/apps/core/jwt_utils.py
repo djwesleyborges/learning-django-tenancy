@@ -42,6 +42,13 @@ def get_user_from_jwt_token(token):
     try:
         user = User.objects.select_related('tenant').get(id=payload['user_id'])
         print(f"✅ Found user: {user.username}")
+        
+        # Verificar se o usuário tem tenant
+        if not user.tenant:
+            print(f"❌ User {user.username} has no tenant associated")
+            return None
+            
+        print(f"✅ User {user.username} has tenant: {user.tenant.name}")
         return user
     except User.DoesNotExist:
         print(f"❌ User not found for id: {payload.get('user_id')}")

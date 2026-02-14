@@ -385,6 +385,54 @@ def get_tenant_info_jwt(request):
     }
 
 
+@router.post("/validate-tenant-access", response=dict, auth=jwt_auth)
+def validate_tenant_access(request, payload: dict):
+    """Valida se o usuário pode acessar o tenant baseado no domínio"""
+    from ninja import Schema
+    
+    class ValidationSchema(Schema):
+        tenant_id: int
+        domain: str
+    
+    try:
+        data = ValidationSchema(**payload)
+    except:
+        return {
+            "valid": False,
+            "message": "Dados inválidos"
+        }
+    
+    user = request.auth
+    tenant_id = data.tenant_id
+    domain = data.domain
+    
+    if not user.tenant or user.tenant.id != tenant_id:
+        return {
+            "valid": False,
+            "message": "Usuário não pertence a este tenant"
+        }
+    
+    try:
+        from .models import Domain
+        tenant_domain = Domain.objects.get(tenant=user.tenant, is_primary=True)
+        
+        if tenant_domain.domain == domain:
+            return {
+                "valid": True,
+                "message": "Acesso permitido"
+            }
+        else:
+            return {
+                "valid": False,
+                "message": f"Domínio não corresponde ao tenant do usuário. Esperado: {tenant_domain.domain}, Recebido: {domain}"
+            }
+    except Domain.DoesNotExist:
+        return {
+            "valid": False,
+            "message": "Domínio do tenant não encontrado"
+        }
+
+
 @router.post("/logout-jwt", response=dict)
 def logout_jwt_endpoint(request):
     """Endpoint de logout JWT (stateless - apenas informativo)"""

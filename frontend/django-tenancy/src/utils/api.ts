@@ -1,6 +1,20 @@
 // API utilities for Django Ninja backend
 
-const API_BASE_URL = 'http://localhost:8000/api';
+// Obter a URL base da API dinamicamente baseada no subdomínio atual
+const getApiBaseUrl = (): string => {
+  const hostname = window.location.hostname;
+  const port = hostname === 'localhost' ? '8000' : '8000';
+  
+  // Se estamos em um subdomínio, usar o mesmo subdomínio para a API
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:${port}/api`;
+  }
+  
+  // Fallback para localhost (desenvolvimento)
+  return `http://localhost:8000/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Interface para respostas da API
 export interface AuthResponse {
@@ -81,9 +95,76 @@ const getToken = (): string | null => {
   return accessToken;
 };
 
-const removeToken = () => {
+// Limpar TODOS os dados de autenticação
+export const clearAllAuthData = () => {
+  console.log('🗑️ Limpando TODOS os dados de autenticação...');
+  
+  // Limpar localStorage
+  console.log('🧹 Limpando localStorage...');
+  const keysToRemove: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (
+      key.includes('token') || 
+      key.includes('auth') || 
+      key.includes('user') || 
+      key.includes('tenant') ||
+      key.includes('csrf')
+    )) {
+      keysToRemove.push(key);
+    }
+  }
+  keysToRemove.forEach(key => {
+    console.log(`  - Removendo localStorage: ${key}`);
+    localStorage.removeItem(key);
+  });
+  
+  // Limpar sessionStorage
+  console.log('🧹 Limpando sessionStorage...');
+  const sessionKeysToRemove: string[] = [];
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    if (key && (
+      key.includes('token') || 
+      key.includes('auth') || 
+      key.includes('user') || 
+      key.includes('tenant') ||
+      key.includes('csrf')
+    )) {
+      sessionKeysToRemove.push(key);
+    }
+  }
+  sessionKeysToRemove.forEach(key => {
+    console.log(`  - Removendo sessionStorage: ${key}`);
+    sessionStorage.removeItem(key);
+  });
+  
+  // Limpar cookies relacionados à autenticação
+  console.log('🧹 Limpando cookies...');
+  document.cookie.split(';').forEach(cookie => {
+    const eqPos = cookie.indexOf('=');
+    const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+    if (name && (
+      name.includes('token') || 
+      name.includes('auth') || 
+      name.includes('user') || 
+      name.includes('tenant') ||
+      name.includes('csrf') ||
+      name.includes('session')
+    )) {
+      console.log(`  - Removendo cookie: ${name}`);
+      // Remover cookie para todos os domínios e caminhos
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.localhost;`;
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname};`;
+    }
+  });
+  
+  // Resetar variáveis em memória
   accessToken = null;
-  localStorage.removeItem('access_token');
+  csrfToken = null;
+  
+  console.log('✅ Todos os dados de autenticação foram limpos');
 };
 
 // Gerenciar token CSRF (manter para compatibilidade)
@@ -183,26 +264,37 @@ export const checkAuthJWT = async (): Promise<{
 }> => {
   const token = getToken();
   
+  console.log('🔍 checkAuthJWT chamado, token presente:', !!token);
+  
   if (!token) {
+    console.log('❌ Sem token, retornando não autenticado');
     return { is_authenticated: false };
   }
 
   try {
+    console.log('🔄 Fazendo requisição para check-auth-jwt...');
     const response = await fetch(`${API_BASE_URL}/auth/check-auth-jwt`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
 
+    console.log('📥 Resposta do check-auth-jwt:', response.status);
+    
     if (response.ok) {
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ checkAuthJWT sucesso:', result);
+      return result;
     } else {
-      // Token inválido, remover
-      removeToken();
+      console.log('❌ Resposta não ok, limpando todos os dados');
+      // Token inválido, limpar TODOS os dados
+      clearAllAuthData();
       return { is_authenticated: false };
     }
   } catch (error) {
-    console.error('Check JWT auth error:', error);
+    console.error('❌ Check JWT auth error:', error);
+    // Em caso de erro, limpar todos os dados
+    clearAllAuthData();
     return { is_authenticated: false };
   }
 };
@@ -256,14 +348,14 @@ export const logoutJWT = async (): Promise<void> => {
       }
     }
     
-    // Sempre remover o token localmente
-    console.log('🗑️ Removendo token local...');
-    removeToken();
+    // Limpar TODOS os dados de autenticação localmente
+    console.log('🗑️ Limpando dados locais...');
+    clearAllAuthData();
     console.log('✅ Logout concluído');
   } catch (error) {
     console.error('❌ JWT Logout error:', error);
-    // Mesmo com erro, remover token localmente
-    removeToken();
+    // Mesmo com erro, limpar todos os dados localmente
+    clearAllAuthData();
     throw error;
   }
 };
@@ -389,18 +481,56 @@ export const getProfile = async (): Promise<any> => {
   }
 };
 
-// Obter informações do tenant
-export const getTenantInfo = async (): Promise<any> => {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/tenant-info`, {
-      credentials: 'include',
-    });
+// Obter informações do tenant atual baseado no subdomínio
+export const getCurrentTenantInfo = (): { domain: string; isSubdomain: boolean } => {
+  const hostname = window.location.hostname;
+  
+  return {
+    domain: hostname,
+    isSubdomain: hostname !== 'localhost' && hostname !== '127.0.0.1'
+  };
+};
 
-    if (response.ok) {
-      return await response.json();
-    }
+// Verificar se o usuário pode acessar este tenant
+export const validateUserTenantAccess = async (user: any): Promise<boolean> => {
+  const { domain, isSubdomain } = getCurrentTenantInfo();
+  
+  console.log('🔍 validateUserTenantAccess:');
+  console.log('  - domain:', domain);
+  console.log('  - isSubdomain:', isSubdomain);
+  console.log('  - user.tenant:', user.tenant);
+  
+  // Se não for subdomínio, permitir acesso (página de login/registro)
+  if (!isSubdomain) {
+    console.log('✅ Não é subdomínio, acesso permitido');
+    return true;
+  }
+  
+  // Verificar se o usuário tem tenant e se o domínio corresponde
+  if (!user.tenant) {
+    console.log('❌ Usuário não tem tenant');
+    return false;
+  }
+  
+  try {
+    console.log('🔄 Fazendo requisição de validação...');
+    const response = await fetch(`${API_BASE_URL}/auth/validate-tenant-access`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getToken()}`,
+      },
+      body: JSON.stringify({
+        tenant_id: user.tenant.id,
+        domain: domain
+      })
+    });
+    
+    const result = await response.json();
+    console.log('📥 Resposta da validação:', result);
+    return result.valid;
   } catch (error) {
-    console.error('Get tenant info error:', error);
-    throw error;
+    console.error('❌ Erro na validação:', error);
+    return false;
   }
 };

@@ -1,4 +1,18 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+// Obter a URL base da API dinamicamente baseada no subdomínio atual
+const getApiBaseUrl = (): string => {
+  const hostname = window.location.hostname;
+  const port = hostname === 'localhost' ? '8000' : '8000';
+  
+  // Se estamos em um subdomínio, usar o mesmo subdomínio para a API
+  if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+    return `http://${hostname}:${port}/api`;
+  }
+  
+  // Fallback para localhost (desenvolvimento)
+  return `http://localhost:8000/api`;
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Tipos
 export interface Project {

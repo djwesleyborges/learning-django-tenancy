@@ -40,10 +40,17 @@ jwt_auth = JWTAuth()
 def list_projects(request):
     """Listar todos os projetos do usuário logado"""
     print(f"🔍 DEBUG: list_projects called (with auth)")
+    print(f"🔍 DEBUG: authenticated user: {request.auth}")
+    print(f"🔍 DEBUG: current schema: {request.tenant.schema_name if hasattr(request, 'tenant') else 'No tenant'}")
+    print(f"🔍 DEBUG: connection schema: {request.tenant.schema_name if hasattr(request, 'tenant') else 'No tenant'}")
     
+    # Em um sistema multi-tenant, cada schema tem seus próprios projetos
+    # Não precisa filtrar por usuário, pois o schema já segrega os dados corretos
     projects = Project.objects.all().prefetch_related(
         Prefetch('tasks', queryset=Task.objects.all())
     )
+    
+    print(f"🔍 DEBUG: found {projects.count()} projects in schema")
     
     return [
         ProjectSchema(
@@ -96,11 +103,19 @@ def get_project(request, project_id: int):
 @router.post("/projects", response=ProjectSchema, auth=jwt_auth)
 def create_project(request, payload: ProjectCreateSchema):
     """Criar um novo projeto"""
+    print(f"🔍 DEBUG: create_project called")
+    print(f"🔍 DEBUG: authenticated user: {request.auth}")
+    print(f"🔍 DEBUG: current schema: {request.tenant.schema_name if hasattr(request, 'tenant') else 'No tenant'}")
+    print(f"🔍 DEBUG: connection schema: {request.tenant.schema_name if hasattr(request, 'tenant') else 'No tenant'}")
+    print(f"🔍 DEBUG: payload: {payload}")
+
     project = Project.objects.create(
         name=payload.name,
         description=payload.description,
         is_completed=payload.is_completed
     )
+    
+    print(f"🔍 DEBUG: project created with id: {project.id}")
     
     return ProjectSchema(
         id=project.id,

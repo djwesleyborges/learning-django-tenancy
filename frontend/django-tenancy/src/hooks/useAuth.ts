@@ -1,7 +1,7 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { loginJWT, registerJWT, checkAuthJWT, logoutJWT, type LoginData, type RegisterData, type JWTAuthResponse } from '../utils/api';
+import { loginJWT, registerJWT, checkAuthJWT, logoutJWT, getCurrentTenantInfo, type LoginData, type RegisterData, type JWTAuthResponse } from '../utils/api';
 
 interface AuthContextType {
   user: any;
@@ -34,6 +34,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [tenant, setTenant] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [justLoggedIn, setJustLoggedIn] = useState(false); // Para evitar warning após login
   const navigate = useNavigate();
 
   // Verificar status de autenticação ao montar o componente
@@ -43,14 +44,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAuthStatus = async () => {
     try {
+      console.log('🔍 checkAuthStatus chamado');
       const authData = await checkAuthJWT();
       setIsAuthenticated(authData.is_authenticated);
       
       if (authData.is_authenticated && authData.user) {
+        // Verificação simples de tenant - apenas log, sem redirecionamento
+        const { domain, isSubdomain } = getCurrentTenantInfo();
+        console.log('🔍 Domínio atual:', domain, 'isSubdomain:', isSubdomain);
+        
+        if (isSubdomain && authData.user.tenant) {
+          const expectedDomain = `${authData.user.tenant.schema_name}.localhost`;
+          console.log('🔍 Domínio esperado:', expectedDomain);
+          
+          if (domain !== expectedDomain) {
+            console.log('⚠️ Usuário em domínio diferente do seu tenant');
+            // Mostrar warning apenas se não for logo após redirecionamento de login
+            // (ou seja, se o usuário acessou diretamente o URL errado)
+            if (!justLoggedIn) {
+              toast.error(`Você está no domínio ${domain} mas seu tenant é ${expectedDomain}`, {
+                duration: 5000,
+              });
+            }
+          }
+        }
+        
+        console.log('✅ Usuário autenticado, atualizando estado...');
         setUser(authData.user);
         if (authData.tenant_info) {
           setTenant(authData.tenant_info);
         }
+        
+        // Resetar flag após primeira verificação
+        setJustLoggedIn(false);
       }
     } catch (error) {
       console.error('Error checking auth status:', error);
@@ -79,24 +105,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
         setIsAuthenticated(true);
         
+        // Marcar que acabou de fazer login para evitar warning de domínio
+        setJustLoggedIn(true);
+        
         console.log('🔄 Verificando redirecionamento...');
         console.log('redirect_url:', response.redirect_url);
         
-        // Usar redirect_url da API se disponível, senão redirecionar para /
+        // Usar redirect_url da API se disponível
         if (response.redirect_url) {
-          console.log('🔗 Redirecionando para URL da API:', response.redirect_url);
-          // Verificar se é URL base (termina com /) ou pathname específico
-          const url = new URL(response.redirect_url);
-          console.log('📍 Path extraído:', url.pathname);
-          
-          // Se o pathname for vazio ou apenas "/", redirecionar para Home (/)
-          if (!url.pathname || url.pathname === '/') {
-            console.log('🏠 URL base detectada, redirecionando para Home (/)');
-            navigate('/');  // Redirecionar para Home
-          } else {
-            console.log('📂 Path específico detectado, redirecionando para:', url.pathname);
-            navigate(url.pathname);  // Redirecionar para pathname específico
-          }
+          console.log('🔗 Redirecionando para URL do tenant:', response.redirect_url);
+          // Redirecionar para o subdomínio correto
+          window.location.href = response.redirect_url;
         } else {
           console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
           navigate('/');  // Redirecionar para Home
@@ -157,10 +176,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUser(null);
       setTenant(null);
       setIsAuthenticated(false);
+      setJustLoggedIn(false); // Resetar flag
+      
       // Mostrar toast de logout
       toast.success('Logout realizado com sucesso!');
-      console.log('🔄 Redirecionando para /login');
-      navigate('/login');
+      
+      // Redirecionar para o domínio principal para evitar conflito de tenants
+      const { isSubdomain } = getCurrentTenantInfo();
+      if (isSubdomain) {
+        console.log('🔄 Redirecionando para domínio principal após logout');
+        window.location.href = 'http://localhost:5173/login';
+      } else {
+        console.log('🔄 Redirecionando para /login');
+        navigate('/login');
+      }
     } catch (error) {
       console.error('❌ Logout error:', error);
       // Mostrar toast de erro

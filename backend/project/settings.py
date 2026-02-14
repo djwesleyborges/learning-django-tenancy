@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django_tenants.middleware.main.TenantMainMiddleware',
+    'apps.core.middleware.TenantSubdomainMiddleware',  # Middleware personalizado para debugging
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -174,12 +175,8 @@ LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = '/'
 
 # ============================ CORS SETTINGS ===============================
-# Configuração para produção - altere conforme necessário
-CORS_ALLOWED_ORIGINS = [
-    origin.strip() 
-    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173,http://usuario.localhost:5173').split(',') 
-    if origin.strip()
-]
+# Para desenvolvimento com subdomínios
+CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento!
 CORS_ALLOW_CREDENTIALS = True
 # Para desenvolvimento, você pode usar:
 # CORS_ALLOW_ALL_ORIGINS = True
