@@ -6,6 +6,7 @@ from django.contrib.auth.models import AnonymousUser
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.conf import settings
+from django_tenants.utils import schema_context
 from .models import User, Client
 from .utils import create_tenant_with_domain, get_tenant_redirect_url
 from .jwt_utils import generate_jwt_token, JWTAuth
@@ -204,20 +205,22 @@ def register_endpoint(request, payload: RegisterSchema):
                 message="E-mail já está em uso"
             )
         
-        # Criar usuário
-        user = User.objects.create_user(
-            username=payload.username,
-            email=payload.email,
-            password=payload.password,
-            first_name=payload.first_name,
-            last_name=payload.last_name
-        )
-        
-        # Criar tenant e domínio
-        tenant, domain = create_tenant_with_domain(
-            payload.organization,
-            user
-        )
+        # Criar tenant e domínio no schema public
+        with schema_context('public'):
+            # Criar usuário
+            user = User.objects.create_user(
+                username=payload.username,
+                email=payload.email,
+                password=payload.password,
+                first_name=payload.first_name,
+                last_name=payload.last_name
+            )
+            
+            # Criar tenant e domínio
+            tenant, domain = create_tenant_with_domain(
+                payload.organization,
+                user
+            )
         
         # Autenticar usuário após registro
         login(request, user)
@@ -240,6 +243,74 @@ def register_endpoint(request, payload: RegisterSchema):
         return AuthResponseSchema(
             success=False,
             message=f"Erro ao registrar usuário: {str(e)}"
+        )
+
+
+@router.post("/register-jwt", response=JWTAuthResponseSchema)
+def register_jwt_endpoint(request, payload: RegisterSchema):
+    """Endpoint de registro JWT (recomendado para APIs)"""
+    try:
+        # Validar senhas
+        if payload.password != payload.password_confirm:
+            return JWTAuthResponseSchema(
+                success=False,
+                message="As senhas não coincidem",
+                access_token="",
+                expires_in=0
+            )
+        
+        # Verificar se usuário já existe
+        if User.objects.filter(username=payload.username).exists():
+            return JWTAuthResponseSchema(
+                success=False,
+                message="Nome de usuário já existe",
+                access_token="",
+                expires_in=0
+            )
+        
+        if User.objects.filter(email=payload.email).exists():
+            return JWTAuthResponseSchema(
+                success=False,
+                message="E-mail já está em uso",
+                access_token="",
+                expires_in=0
+            )
+        
+        # Criar tenant e domínio no schema public
+        with schema_context('public'):
+            # Criar usuário
+            user = User.objects.create_user(
+                username=payload.username,
+                email=payload.email,
+                password=payload.password,
+                first_name=payload.first_name,
+                last_name=payload.last_name
+            )
+            
+            # Criar tenant e domínio
+            tenant, domain = create_tenant_with_domain(
+                payload.organization,
+                user
+            )
+        
+        # Recarregar usuário com o tenant para garantir que o relacionamento seja carregado
+        user = User.objects.select_related('tenant').get(id=user.id)
+        
+        return JWTAuthResponseSchema(
+            success=True,
+            message="Usuário criado com sucesso! Faça login para continuar.",
+            access_token="",  # Não gerar token no registro
+            expires_in=0,
+            user=UserResponseSchema.from_orm(user),
+            redirect_url="/login"  # Redirecionar para login
+        )
+        
+    except Exception as e:
+        return JWTAuthResponseSchema(
+            success=False,
+            message=f"Erro ao registrar usuário: {str(e)}",
+            access_token="",
+            expires_in=0
         )
 
 

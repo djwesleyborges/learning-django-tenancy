@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { register, type RegisterData } from '../utils/api';
+import { useAuth } from '../hooks/useAuth';
+import type { RegisterData } from '../utils/api';
 
 const Register = () => {
   const [formData, setFormData] = useState<RegisterData>({
@@ -14,7 +14,7 @@ const Register = () => {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const navigate = useNavigate();
+  const { register } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -38,11 +38,8 @@ const Register = () => {
       const response = await register(formData);
       
       if (response.success) {
-        // Se houver redirect_url, a função register já redirecionou
-        if (!response.redirect_url) {
-          // Redirecionamento fallback para desenvolvimento
-          navigate('/login');
-        }
+        // O hook useAuth já gerencia o toast e o redirecionamento
+        // Não precisa fazer nada aqui
       } else {
         setError(response.message || 'Falha no registro');
       }

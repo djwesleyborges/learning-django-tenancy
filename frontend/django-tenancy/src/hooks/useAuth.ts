@@ -1,6 +1,7 @@
 import React, { useState, useEffect, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginJWT, logoutJWT, checkAuthJWT, type LoginData, type RegisterData, type JWTAuthResponse } from '../utils/api';
+import toast from 'react-hot-toast';
+import { loginJWT, registerJWT, checkAuthJWT, logoutJWT, type LoginData, type RegisterData, type JWTAuthResponse } from '../utils/api';
 
 interface AuthContextType {
   user: any;
@@ -68,6 +69,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('📥 Resposta do login:', response);
       
       if (response.success) {
+        // Mostrar toast de sucesso
+        toast.success('Login realizado com sucesso!');
+        
         console.log('✅ Login successful, atualizando estado...');
         setUser(response.user);
         if (response.user?.tenant) {
@@ -97,70 +101,71 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
           navigate('/');  // Redirecionar para Home
         }
+      } else {
+        // Mostrar toast de erro se a API retornar erro
+        toast.error(response.message || 'Credenciais inválidas');
       }
       
       return response;
     } catch (error) {
       console.error('❌ Login error:', error);
+      // Mostrar toast de erro
+      toast.error('Erro ao fazer login. Verifique suas credenciais.');
       throw error;
     }
   };
 
   const handleRegister = async (data: RegisterData): Promise<JWTAuthResponse> => {
     try {
-      // Por enquanto, register ainda usa o método antigo
-      // Futuramente podemos criar um register-jwt
-      const response = await loginJWT(data);
+      console.log('🚀 Iniciando registro...');
+      console.log('📤 Dados do registro:', data);
+      
+      const response = await registerJWT(data);
+      console.log('📥 Resposta do registro:', response);
       
       if (response.success) {
-        setUser(response.user);
-        if (response.user?.tenant) {
-          setTenant(response.user.tenant);
-        }
-        setIsAuthenticated(true);
+        console.log('✅ Registro successful, mostrando toast...');
+        // Mostrar toast de sucesso
+        toast.success('Usuário criado com sucesso! Redirecionando para login...');
         
-        // Usar redirect_url da API se disponível, senão redirecionar para /
-        if (response.redirect_url) {
-          console.log('🔗 Redirecionando para URL da API:', response.redirect_url);
-          // Verificar se é URL base (termina com /) ou pathname específico
-          const url = new URL(response.redirect_url);
-          console.log('📍 Path extraído:', url.pathname);
-          
-          // Se o pathname for vazio ou apenas "/", redirecionar para Home (/)
-          if (!url.pathname || url.pathname === '/') {
-            console.log('🏠 URL base detectada, redirecionando para Home (/)');
-            navigate('/');  // Redirecionar para Home
-          } else {
-            console.log('📂 Path específico detectado, redirecionando para:', url.pathname);
-            navigate(url.pathname);  // Redirecionar para pathname específico
-          }
-        } else {
-          console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
-          navigate('/');  // Redirecionar para Home
-        }
+        console.log('⏰ Aguardando 2 segundos antes de redirecionar...');
+        // Redirecionar para login após 2 segundos
+        setTimeout(() => {
+          console.log('🔄 Redirecionando para /login');
+          navigate('/login');
+        }, 2000);
+      } else {
+        console.log('❌ Erro no registro:', response.message);
+        // Mostrar toast de erro se a API retornar erro
+        toast.error(response.message || 'Erro ao criar usuário.');
       }
       
       return response;
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
+      // Mostrar toast de erro
+      toast.error('Erro ao criar usuário. Tente novamente.');
       throw error;
     }
   };
 
   const handleLogout = async () => {
     try {
+      console.log('🚪 Iniciando logout no hook useAuth...');
       await logoutJWT();
+      console.log('🧹 Limpando estado de autenticação...');
       setUser(null);
       setTenant(null);
       setIsAuthenticated(false);
+      // Mostrar toast de logout
+      toast.success('Logout realizado com sucesso!');
+      console.log('🔄 Redirecionando para /login');
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
-      // Forçar logout mesmo em caso de erro
-      setUser(null);
-      setTenant(null);
-      setIsAuthenticated(false);
-      navigate('/login');
+      console.error('❌ Logout error:', error);
+      // Mostrar toast de erro
+      toast.error('Erro ao fazer logout.');
+      throw error;
     }
   };
 

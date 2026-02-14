@@ -148,7 +148,34 @@ export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
   }
 };
 
-// Verificar autenticação JWT
+// Registro JWT (recomendado)
+export const registerJWT = async (data: RegisterData): Promise<JWTAuthResponse> => {
+  try {
+    console.log('🔐 Fazendo requisição de registro JWT para:', `${API_BASE_URL}/auth/register-jwt`);
+    console.log('📤 Dados do registro:', data);
+    
+    const response = await fetch(`${API_BASE_URL}/auth/register-jwt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    console.log('📥 Resposta da API de registro:', result);
+    
+    // Não salvar token no registro - usuário deve fazer login manualmente
+    if (result.success && result.access_token) {
+      console.log('ℹ️ Token recebido mas não será salvo - usuário deve fazer login');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ JWT Register error:', error);
+    throw error;
+  }
+};
 export const checkAuthJWT = async (): Promise<{
   is_authenticated: boolean;
   user?: any;
@@ -207,18 +234,35 @@ export const getProfileJWT = async (): Promise<any> => {
 };
 
 // Logout JWT
-export const logoutJWT = async (): Promise<{ success: boolean; message: string }> => {
+export const logoutJWT = async (): Promise<void> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/logout-jwt`, {
-      method: 'POST',
-    });
-
-    removeToken(); // Remover token do lado do cliente
+    const token = getToken();
+    console.log('🚪 Fazendo logout JWT...');
+    console.log('📍 Token presente:', !!token);
     
-    return await response.json();
+    if (token) {
+      const response = await fetch(`${API_BASE_URL}/auth/logout-jwt`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      console.log('📥 Resposta do logout:', response.status);
+      
+      if (!response.ok) {
+        console.warn('⚠️ Logout JWT falhou, mas continuando...');
+      }
+    }
+    
+    // Sempre remover o token localmente
+    console.log('🗑️ Removendo token local...');
+    removeToken();
+    console.log('✅ Logout concluído');
   } catch (error) {
-    console.error('JWT Logout error:', error);
-    // Remover token mesmo em caso de erro
+    console.error('❌ JWT Logout error:', error);
+    // Mesmo com erro, remover token localmente
     removeToken();
     throw error;
   }
