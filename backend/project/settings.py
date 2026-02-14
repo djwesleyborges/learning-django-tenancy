@@ -45,6 +45,8 @@ SHARED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
+    'corsheaders',
+    'ninja',  # Django Ninja
     'apps.core',
 ]
 
@@ -56,6 +58,7 @@ TENANT_APPS = [
 INSTALLED_APPS = list(SHARED_APPS) + [app for app in TENANT_APPS if app not in SHARED_APPS]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -128,11 +131,13 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Sao_Paulo'
 
 USE_I18N = True
+
+USE_L10N = True
 
 USE_TZ = True
 
@@ -158,3 +163,29 @@ LOGIN_REDIRECT_URL = 'tasks:project_list'
 LOGOUT_REDIRECT_URL = 'core:login'
 
 TENANT_DOMAIN_MODEL = "core.Domain"  # app.Model
+
+# ============================ FIXTURES / SEEDS ===============================
+FIXTURE_DIRS = [
+    os.path.join(BASE_DIR, 'fixtures'),
+]
+
+############## LOGIN REDIRECT ################
+LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = '/'
+
+# ============================ CORS SETTINGS ===============================
+# Configuração para produção - altere conforme necessário
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() 
+    for origin in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') 
+    if origin.strip()
+]
+CORS_ALLOW_CREDENTIALS = True
+# Para desenvolvimento, você pode usar:
+# CORS_ALLOW_ALL_ORIGINS = True
+
+CORS_ALLOW_HEADERS = [
+    'content-type',
+    'authorization',
+]
+LOGOUT_REDIRECT_URL = 'login'

@@ -16,14 +16,15 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django_tenants.utils import get_tenant
-from django_tenants.middleware import TenantMainMiddleware
+from project.apis import api
 
 # URLs públicas (schema public)
 public_patterns = [
     path('admin/', admin.site.urls),
     path('auth/', include('apps.core.urls')),
+    path('api/', api.urls),
     path('', include('apps.tasks.urls')),
+    
 ]
 
 urlpatterns = public_patterns
