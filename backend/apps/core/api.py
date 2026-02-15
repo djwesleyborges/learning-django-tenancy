@@ -1,3 +1,4 @@
+from django.utils import timezone
 from ninja import Router, Schema
 from ninja.security import HttpBearer
 from typing import Optional, Dict, Any
@@ -27,6 +28,16 @@ class RegisterSchema(Schema):
     organization: str
     first_name: str = ""
     last_name: str = ""
+
+
+class CreateUserForTenantSchema(Schema):
+    username: str
+    email: str
+    password: str
+    password_confirm: str
+    first_name: str = ""
+    last_name: str = ""
+    role: str = "member"
 
 
 class UserResponseSchema(Schema):
@@ -113,6 +124,7 @@ def login_endpoint(request, payload: LoginSchema):
             redirect_url = None
             if user.tenant:
                 redirect_url = get_tenant_redirect_url(user, for_api=True)
+            
             return AuthResponseSchema(
                 success=True,
                 message="Login realizado com sucesso",
@@ -135,7 +147,7 @@ def login_endpoint(request, payload: LoginSchema):
 
 @router.post("/login-jwt", response=JWTAuthResponseSchema)
 def login_jwt_endpoint(request, payload: LoginSchema):
-    """Endpoint de login JWT (recomendado para APIs)"""
+    """Endpoint de login JWT (recomendado para APIs) - permite login em qualquer contexto"""
     try:
         user = authenticate(
             username=payload.username,
@@ -152,7 +164,20 @@ def login_jwt_endpoint(request, payload: LoginSchema):
             # Determinar URL de redirecionamento para o frontend
             redirect_url = None
             if user.tenant:
-                redirect_url = get_tenant_redirect_url(user, for_api=True)
+                # Verificar se já está no subdomínio correto
+                current_host = request.get_host().split(':')[0]
+                expected_domain = f"{user.tenant.schema_name}.localhost"
+                
+                if current_host == expected_domain:
+                    # Já está no lugar certo - não redirecionar
+                    redirect_url = None
+                else:
+                    # Redirecionar para o subdomínio correto
+                    redirect_url = get_tenant_redirect_url(user, for_api=True)
+            
+            # Atualizar last_login
+            user.last_login = timezone.now()
+            user.save(update_fields=["last_login"])
             
             return JWTAuthResponseSchema(
                 success=True,
@@ -440,3 +465,58 @@ def logout_jwt_endpoint(request):
         "success": True,
         "message": "Logout realizado com sucesso"
     }
+
+
+@router.post("/create-user-tenant", response=UserResponseSchema, auth=jwt_auth)
+def create_user_for_tenant(request, payload: CreateUserForTenantSchema):
+    """Criar usuário dentro do tenant atual (apenas para admins da organização)"""
+    try:
+        current_user = request.auth
+        
+        # Verificar se o usuário atual tem tenant
+        if not current_user.tenant:
+            return {
+                "success": False,
+                "message": "Usuário não pertence a nenhuma organização"
+            }
+        
+        # Validar senhas
+        if payload.password != payload.password_confirm:
+            return {
+                "success": False,
+                "message": "As senhas não coincidem"
+            }
+        
+        # Verificar se usuário já existe (no schema atual)
+        if User.objects.filter(username=payload.username).exists():
+            return {
+                "success": False,
+                "message": "Nome de usuário já existe nesta organização"
+            }
+        
+        if User.objects.filter(email=payload.email).exists():
+            return {
+                "success": False,
+                "message": "E-mail já está em uso nesta organização"
+            }
+        
+        # Criar novo usuário no schema atual (herdando o tenant do usuário atual)
+        new_user = User.objects.create_user(
+            username=payload.username,
+            email=payload.email,
+            password=payload.password,
+            first_name=payload.first_name,
+            last_name=payload.last_name,
+            tenant=current_user.tenant  # Herdar tenant do usuário atual
+        )
+        
+        # Recarregar com tenant para resposta
+        new_user = User.objects.select_related('tenant').get(id=new_user.id)
+        
+        return UserResponseSchema.from_orm(new_user)
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "message": f"Erro ao criar usuário: {str(e)}"
+        }

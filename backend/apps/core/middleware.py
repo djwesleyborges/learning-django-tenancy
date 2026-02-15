@@ -19,6 +19,11 @@ class TenantSubdomainMiddleware(MiddlewareMixin):
         # Log para debugging
         logger.info(f"🌐 TenantMiddleware: Processing request for host: {host}")
         
+        # Permitir login em qualquer contexto (cross-tenant)
+        if request.path.startswith('/api/auth/login'):
+            logger.info(f"🔓 TenantMiddleware: Login endpoint - allowing cross-tenant access")
+            return None
+        
         # Verificar se tem tenant no request
         if hasattr(request, 'tenant') and request.tenant:
             logger.info(f"✅ TenantMiddleware: Tenant found: {request.tenant.schema_name}")

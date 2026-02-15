@@ -76,6 +76,17 @@ export interface RegisterData {
   last_name?: string;
 }
 
+// Interface para dados de criação de usuário em tenant
+export interface CreateUserForTenantData {
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+}
+
 // Gerenciar token JWT
 let accessToken: string | null = null;
 
@@ -532,5 +543,40 @@ export const validateUserTenantAccess = async (user: any): Promise<boolean> => {
   } catch (error) {
     console.error('❌ Erro na validação:', error);
     return false;
+  }
+};
+
+// Criar usuário para o tenant atual
+export const createUserForTenant = async (data: CreateUserForTenantData): Promise<any> => {
+  const token = getToken();
+  
+  if (!token) {
+    throw new Error('Usuário não autenticado');
+  }
+  
+  try {
+    console.log('👥 Criando usuário para tenant atual...');
+    console.log('📤 Dados do usuário:', data);
+    
+    const response = await fetch(`${API_BASE_URL}/auth/create-user-tenant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    
+    const result = await response.json();
+    console.log('📥 Resposta da criação de usuário:', result);
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Erro ao criar usuário');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('❌ Erro ao criar usuário para tenant:', error);
+    throw error;
   }
 };

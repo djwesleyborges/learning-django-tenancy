@@ -8,6 +8,7 @@ import Profile from './pages/Profile';
 import Home from './pages/Home';
 import ProjectList from './pages/ProjectList';
 import ProjectCreate from './pages/ProjectCreate';
+import CreateUser from './pages/CreateUser';
 
 function App() {
   return (
@@ -52,6 +53,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProjectCreate />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/users/create" 
+              element={
+                <ProtectedRoute>
+                  <CreateUser />
                 </ProtectedRoute>
               } 
             />

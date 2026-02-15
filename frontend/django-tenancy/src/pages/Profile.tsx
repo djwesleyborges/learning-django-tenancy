@@ -1,7 +1,8 @@
 import { useAuth } from '../hooks/useAuth';
+import Header from '../components/Header';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   if (!user) {
     return (
@@ -14,6 +15,8 @@ const Profile = () => {
   }
   return (
     <div className="max-w-2xl mx-auto py-6 px-4">
+      <Header user={user} onLogout={logout} />
+      
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">

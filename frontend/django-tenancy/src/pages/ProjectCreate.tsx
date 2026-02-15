@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { projectsApi, type ProjectCreate } from '../utils/projectsApi';
+import { useAuth } from '../hooks/useAuth';
+import Header from '../components/Header';
 
 const ProjectCreate = () => {
   const [formData, setFormData] = useState<ProjectCreate>({
@@ -12,6 +14,7 @@ const ProjectCreate = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -27,7 +30,7 @@ const ProjectCreate = () => {
     setLoading(true);
     
     try {
-      const project = await projectsApi.create(formData);
+      await projectsApi.create(formData);
       toast.success('Projeto criado com sucesso!');
       navigate('/');  // Redirecionar para Home
     } catch (err: any) {
@@ -40,6 +43,8 @@ const ProjectCreate = () => {
 
   return (
     <div className="max-w-2xl mx-auto py-6 px-4">
+      <Header user={user} onLogout={logout} />
+      
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-6">

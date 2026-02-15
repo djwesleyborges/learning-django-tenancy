@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { projectsApi, type Project } from '../utils/projectsApi';
+import Header from '../components/Header';
 
 const ProjectList = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, tenant } = useAuth();
+  const { user, tenant, logout } = useAuth();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -32,6 +33,8 @@ const ProjectList = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4">
+      <Header user={user} onLogout={logout} />
+      
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           {tenant?.name || user?.username}'s Projects
