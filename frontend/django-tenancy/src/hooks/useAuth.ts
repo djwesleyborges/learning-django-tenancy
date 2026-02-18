@@ -44,21 +44,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkAuthStatus = async () => {
     try {
-      console.log('🔍 checkAuthStatus chamado');
       const authData = await checkAuthJWT();
       setIsAuthenticated(authData.is_authenticated);
       
       if (authData.is_authenticated && authData.user) {
         // Verificação simples de tenant - apenas log, sem redirecionamento
         const { domain, isSubdomain } = getCurrentTenantInfo();
-        console.log('🔍 Domínio atual:', domain, 'isSubdomain:', isSubdomain);
         
         if (isSubdomain && authData.user.tenant) {
           const expectedDomain = `${authData.user.tenant.schema_name}.localhost`;
-          console.log('🔍 Domínio esperado:', expectedDomain);
           
           if (domain !== expectedDomain) {
-            console.log('⚠️ Usuário em domínio diferente do seu tenant');
             // Mostrar warning apenas se não for logo após redirecionamento de login
             // (ou seja, se o usuário acessou diretamente o URL errado)
             if (!justLoggedIn) {
@@ -69,7 +65,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         }
         
-        console.log('✅ Usuário autenticado, atualizando estado...');
         setUser(authData.user);
         if (authData.tenant_info) {
           setTenant(authData.tenant_info);
@@ -90,15 +85,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleLogin = async (data: LoginData): Promise<JWTAuthResponse> => {
     try {
-      console.log('🚀 Iniciando login...');
       const response = await loginJWT(data);
-      console.log('📥 Resposta do login:', response);
       
       if (response.success) {
         // Mostrar toast de sucesso
         toast.success('Login realizado com sucesso!');
         
-        console.log('✅ Login successful, atualizando estado...');
         setUser(response.user);
         if (response.user?.tenant) {
           setTenant(response.user.tenant);
@@ -108,16 +100,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         // Marcar que acabou de fazer login para evitar warning de domínio
         setJustLoggedIn(true);
         
-        console.log('🔄 Verificando redirecionamento...');
-        console.log('redirect_url:', response.redirect_url);
-        
         // Usar redirect_url da API se disponível
         if (response.redirect_url) {
-          console.log('🔗 Redirecionando para URL do tenant:', response.redirect_url);
           // Redirecionar para o subdomínio correto
           window.location.href = response.redirect_url;
         } else {
-          console.log('🏠 Sem redirect_url, redirecionando para Home (/)');
           navigate('/');  // Redirecionar para Home
         }
       } else {
@@ -136,21 +123,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleRegister = async (data: RegisterData): Promise<JWTAuthResponse> => {
     try {
-      console.log('🚀 Iniciando registro...');
-      console.log('📤 Dados do registro:', data);
-      
       const response = await registerJWT(data);
-      console.log('📥 Resposta do registro:', response);
       
       if (response.success) {
-        console.log('✅ Registro successful, mostrando toast...');
         // Mostrar toast de sucesso
         toast.success('Usuário criado com sucesso! Redirecionando para login...');
         
-        console.log('⏰ Aguardando 2 segundos antes de redirecionar...');
         // Redirecionar para login após 2 segundos
         setTimeout(() => {
-          console.log('🔄 Redirecionando para /login');
           navigate('/login');
         }, 2000);
       } else {
@@ -170,9 +150,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const handleLogout = async () => {
     try {
-      console.log('🚪 Iniciando logout no hook useAuth...');
       await logoutJWT();
-      console.log('🧹 Limpando estado de autenticação...');
       setUser(null);
       setTenant(null);
       setIsAuthenticated(false);
@@ -184,10 +162,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       // Redirecionar para o domínio principal para evitar conflito de tenants
       const { isSubdomain } = getCurrentTenantInfo();
       if (isSubdomain) {
-        console.log('🔄 Redirecionando para domínio principal após logout');
         window.location.href = 'http://localhost:5173/login';
       } else {
-        console.log('🔄 Redirecionando para /login');
         navigate('/login');
       }
     } catch (error) {

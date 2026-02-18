@@ -92,11 +92,8 @@ let accessToken: string | null = null;
 
 // Salvar e recuperar token do localStorage
 const saveToken = (token: string) => {
-  console.log('💾 saveToken chamado com:', token.substring(0, 20) + '...');
   accessToken = token;
   localStorage.setItem('access_token', token);
-  console.log('✅ Token salvo no localStorage');
-  console.log('📍 accessToken definido:', !!accessToken);
 };
 
 const getToken = (): string | null => {
@@ -108,10 +105,7 @@ const getToken = (): string | null => {
 
 // Limpar TODOS os dados de autenticação
 export const clearAllAuthData = () => {
-  console.log('🗑️ Limpando TODOS os dados de autenticação...');
-  
   // Limpar localStorage
-  console.log('🧹 Limpando localStorage...');
   const keysToRemove: string[] = [];
   for (let i = 0; i < localStorage.length; i++) {
     const key = localStorage.key(i);
@@ -126,12 +120,10 @@ export const clearAllAuthData = () => {
     }
   }
   keysToRemove.forEach(key => {
-    console.log(`  - Removendo localStorage: ${key}`);
     localStorage.removeItem(key);
   });
   
   // Limpar sessionStorage
-  console.log('🧹 Limpando sessionStorage...');
   const sessionKeysToRemove: string[] = [];
   for (let i = 0; i < sessionStorage.length; i++) {
     const key = sessionStorage.key(i);
@@ -146,12 +138,10 @@ export const clearAllAuthData = () => {
     }
   }
   sessionKeysToRemove.forEach(key => {
-    console.log(`  - Removendo sessionStorage: ${key}`);
     sessionStorage.removeItem(key);
   });
   
   // Limpar cookies relacionados à autenticação
-  console.log('🧹 Limpando cookies...');
   document.cookie.split(';').forEach(cookie => {
     const eqPos = cookie.indexOf('=');
     const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
@@ -163,7 +153,6 @@ export const clearAllAuthData = () => {
       name.includes('csrf') ||
       name.includes('session')
     )) {
-      console.log(`  - Removendo cookie: ${name}`);
       // Remover cookie para todos os domínios e caminhos
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
       document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.localhost;`;
@@ -174,8 +163,6 @@ export const clearAllAuthData = () => {
   // Resetar variáveis em memória
   accessToken = null;
   csrfToken = null;
-  
-  console.log('✅ Todos os dados de autenticação foram limpos');
 };
 
 // Gerenciar token CSRF (manter para compatibilidade)
@@ -213,9 +200,6 @@ export const getCSRFToken = async (): Promise<string> => {
 // Login JWT (recomendado)
 export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
   try {
-    console.log('🔐 Fazendo requisição JWT para:', `${API_BASE_URL}/auth/login-jwt`);
-    console.log('📤 Dados do login:', data);
-    
     const response = await fetch(`${API_BASE_URL}/auth/login-jwt`, {
       method: 'POST',
       headers: {
@@ -225,12 +209,9 @@ export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
     });
 
     const result = await response.json();
-    console.log('📥 Resposta da API:', result);
     
     if (result.success && result.access_token) {
-      console.log('💾 Salvando token...');
       saveToken(result.access_token);
-      console.log('✅ Token salvo com sucesso!');
     }
     
     return result;
@@ -243,9 +224,6 @@ export const loginJWT = async (data: LoginData): Promise<JWTAuthResponse> => {
 // Registro JWT (recomendado)
 export const registerJWT = async (data: RegisterData): Promise<JWTAuthResponse> => {
   try {
-    console.log('🔐 Fazendo requisição de registro JWT para:', `${API_BASE_URL}/auth/register-jwt`);
-    console.log('📤 Dados do registro:', data);
-    
     const response = await fetch(`${API_BASE_URL}/auth/register-jwt`, {
       method: 'POST',
       headers: {
@@ -255,11 +233,10 @@ export const registerJWT = async (data: RegisterData): Promise<JWTAuthResponse> 
     });
 
     const result = await response.json();
-    console.log('📥 Resposta da API de registro:', result);
     
     // Não salvar token no registro - usuário deve fazer login manualmente
     if (result.success && result.access_token) {
-      console.log('ℹ️ Token recebido mas não será salvo - usuário deve fazer login');
+      // Token recebido mas não será salvo - usuário deve fazer login
     }
     
     return result;
@@ -275,29 +252,21 @@ export const checkAuthJWT = async (): Promise<{
 }> => {
   const token = getToken();
   
-  console.log('🔍 checkAuthJWT chamado, token presente:', !!token);
-  
   if (!token) {
-    console.log('❌ Sem token, retornando não autenticado');
     return { is_authenticated: false };
   }
 
   try {
-    console.log('🔄 Fazendo requisição para check-auth-jwt...');
     const response = await fetch(`${API_BASE_URL}/auth/check-auth-jwt`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
     });
 
-    console.log('📥 Resposta do check-auth-jwt:', response.status);
-    
     if (response.ok) {
       const result = await response.json();
-      console.log('✅ checkAuthJWT sucesso:', result);
       return result;
     } else {
-      console.log('❌ Resposta não ok, limpando todos os dados');
       // Token inválido, limpar TODOS os dados
       clearAllAuthData();
       return { is_authenticated: false };
@@ -340,8 +309,6 @@ export const getProfileJWT = async (): Promise<any> => {
 export const logoutJWT = async (): Promise<void> => {
   try {
     const token = getToken();
-    console.log('🚪 Fazendo logout JWT...');
-    console.log('📍 Token presente:', !!token);
     
     if (token) {
       const response = await fetch(`${API_BASE_URL}/auth/logout-jwt`, {
@@ -352,17 +319,13 @@ export const logoutJWT = async (): Promise<void> => {
         },
       });
 
-      console.log('📥 Resposta do logout:', response.status);
-      
       if (!response.ok) {
-        console.warn('⚠️ Logout JWT falhou, mas continuando...');
+        // Logout falhou, mas continuando...
       }
     }
     
     // Limpar TODOS os dados de autenticação localmente
-    console.log('🗑️ Limpando dados locais...');
     clearAllAuthData();
-    console.log('✅ Logout concluído');
   } catch (error) {
     console.error('❌ JWT Logout error:', error);
     // Mesmo com erro, limpar todos os dados localmente
@@ -506,25 +469,17 @@ export const getCurrentTenantInfo = (): { domain: string; isSubdomain: boolean }
 export const validateUserTenantAccess = async (user: any): Promise<boolean> => {
   const { domain, isSubdomain } = getCurrentTenantInfo();
   
-  console.log('🔍 validateUserTenantAccess:');
-  console.log('  - domain:', domain);
-  console.log('  - isSubdomain:', isSubdomain);
-  console.log('  - user.tenant:', user.tenant);
-  
   // Se não for subdomínio, permitir acesso (página de login/registro)
   if (!isSubdomain) {
-    console.log('✅ Não é subdomínio, acesso permitido');
     return true;
   }
   
   // Verificar se o usuário tem tenant e se o domínio corresponde
   if (!user.tenant) {
-    console.log('❌ Usuário não tem tenant');
     return false;
   }
   
   try {
-    console.log('🔄 Fazendo requisição de validação...');
     const response = await fetch(`${API_BASE_URL}/auth/validate-tenant-access`, {
       method: 'POST',
       headers: {
@@ -538,7 +493,6 @@ export const validateUserTenantAccess = async (user: any): Promise<boolean> => {
     });
     
     const result = await response.json();
-    console.log('📥 Resposta da validação:', result);
     return result.valid;
   } catch (error) {
     console.error('❌ Erro na validação:', error);
@@ -555,9 +509,6 @@ export const createUserForTenant = async (data: CreateUserForTenantData): Promis
   }
   
   try {
-    console.log('👥 Criando usuário para tenant atual...');
-    console.log('📤 Dados do usuário:', data);
-    
     const response = await fetch(`${API_BASE_URL}/auth/create-user-tenant`, {
       method: 'POST',
       headers: {
@@ -568,7 +519,6 @@ export const createUserForTenant = async (data: CreateUserForTenantData): Promis
     });
     
     const result = await response.json();
-    console.log('📥 Resposta da criação de usuário:', result);
     
     if (!response.ok) {
       throw new Error(result.message || 'Erro ao criar usuário');

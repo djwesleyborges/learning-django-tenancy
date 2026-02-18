@@ -48,7 +48,6 @@ export interface ProjectUpdate {
 // Obter token JWT
 const getToken = (): string | null => {
   const token = localStorage.getItem('access_token');
-  console.log('🔑 Token from localStorage:', token ? token.substring(0, 20) + '...' : 'null');
   return token;
 };
 
@@ -57,10 +56,11 @@ const getAuthHeaders = () => {
   const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
+  };
+  return {
+    ...headers,
     ...(token && { 'Authorization': `Bearer ${token}` }),
   };
-  console.log('📤 Request headers:', headers);
-  return headers;
 };
 
 // API de Projetos
