@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { projectsApi, type Project } from '../utils/projectsApi';
 import Header from '../components/Header';
 
-const ProjectList = () => {
+const Home = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, tenant, logout } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -33,35 +35,40 @@ const ProjectList = () => {
 
   return (
     <div className="max-w-6xl mx-auto py-6 px-4">
+      {/* Header com navegação e informações do usuário */}
       <Header user={user} onLogout={logout} />
-      
+
+      {/* Seção de projetos */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          {tenant?.name || user?.username}'s Projects
-        </h1>
-        <a
-          href="/projects/create"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Create Project
-        </a>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900">
+            {tenant?.name ? `Projetos - ${tenant.name}` : 'Seus Projetos'}
+          </h2>
+          <Link
+            to="/projects/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Criar Projeto
+          </Link>
+        </div>
       </div>
 
       {projects.length > 0 ? (
         <div className="mb-4">
           <p className="text-gray-600">
-            Total Projects Found: <strong>{projects.length}</strong>
+            Total de Projetos: <strong>{projects.length}</strong>
           </p>
         </div>
       ) : (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No projects found.</p>
+          <p className="text-gray-500 text-lg">Nenhum projeto encontrado.</p>
           <p className="text-gray-400 mt-2">
-            Create your first project to get started!
+            Crie seu primeiro projeto para começar!
           </p>
         </div>
       )}
 
+      {/* Grid de projetos */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {projects.map((project) => (
           <div
@@ -80,7 +87,7 @@ const ProjectList = () => {
                       : 'bg-yellow-100 text-yellow-800'
                   }`}
                 >
-                  {project.is_completed ? 'Completed' : 'In Progress'}
+                  {project.is_completed ? 'Concluído' : 'Em Andamento'}
                 </span>
               </div>
               <p className="text-sm text-gray-500 mb-3 line-clamp-3">
@@ -88,11 +95,11 @@ const ProjectList = () => {
               </p>
               <div className="flex items-center text-xs text-gray-400">
                 <span>
-                  Created: {new Date(project.created_at).toLocaleDateString()}
+                  Criado: {new Date(project.created_at).toLocaleDateString()}
                 </span>
                 {project.tasks && (
                   <span className="ml-4">
-                    Tasks: {project.tasks.length}
+                    Tarefas: {project.tasks.length}
                   </span>
                 )}
               </div>
@@ -100,14 +107,16 @@ const ProjectList = () => {
             <div className="bg-gray-50 px-4 py-3 sm:px-6">
               <div className="flex space-x-3">
                 <button
+                  onClick={() => navigate(`/projects/${project.id}/tasks`)}
                   className="flex-1 inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  View Tasks
+                  Ver Tarefas
                 </button>
                 <button
+                  onClick={() => navigate(`/projects/${project.id}/edit`)}
                   className="flex-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-indigo-600 bg-indigo-100 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  Edit
+                  Editar
                 </button>
               </div>
             </div>
@@ -118,4 +127,4 @@ const ProjectList = () => {
   );
 };
 
-export default ProjectList;
+export default Home;

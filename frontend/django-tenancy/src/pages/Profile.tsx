@@ -1,12 +1,22 @@
-import type { User } from '../types';
+import { useAuth } from '../hooks/useAuth';
+import Header from '../components/Header';
 
-interface ProfileProps {
-  user: User;
-}
+const Profile = () => {
+  const { user, logout } = useAuth();
 
-const Profile = ({ user }: ProfileProps) => {
+  if (!user) {
+    return (
+      <div className="max-w-2xl mx-auto py-6 px-4">
+        <div className="text-center">
+          <p className="text-gray-500">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="max-w-2xl mx-auto py-6 px-4">
+      <Header user={user} onLogout={logout} />
+      
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">

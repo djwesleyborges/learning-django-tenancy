@@ -1,52 +1,96 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
-import Header from './components/Header';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
+import { AuthProvider } from './hooks/useAuth';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Home from './pages/Home';
 import ProjectList from './pages/ProjectList';
 import ProjectCreate from './pages/ProjectCreate';
-import type { User } from './types';
+import CreateUser from './pages/CreateUser';
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
-
-  const handleLogout = () => {
-    setUser(null);
-  };
-
   return (
     <Router>
-      <div className="min-h-screen bg-gray-50">
-        {user && <Header user={user} onLogout={handleLogout} />}
-        
-        <Routes>
-          <Route 
-            path="/login" 
-            element={!user ? <Login /> : <Navigate to="/projects" replace />} 
-          />
-          <Route 
-            path="/register" 
-            element={!user ? <Register /> : <Navigate to="/projects" replace />} 
-          />
-          <Route 
-            path="/profile" 
-            element={user ? <Profile user={user} /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/projects" 
-            element={user ? <ProjectList /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/projects/create" 
-            element={user ? <ProjectCreate /> : <Navigate to="/login" replace />} 
-          />
-          <Route 
-            path="/" 
-            element={<Navigate to={user ? "/projects" : "/login"} replace />} 
-          />
-        </Routes>
-      </div>
+      <AuthProvider>
+        <div className="min-h-screen bg-gray-50">
+          <Routes>
+            <Route 
+              path="/login" 
+              element={<Login />} 
+            />
+            <Route 
+              path="/register" 
+              element={<Register />} 
+            />
+            <Route 
+              path="/profile" 
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/projects" 
+              element={
+                <ProtectedRoute>
+                  <ProjectList />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/projects/create" 
+              element={
+                <ProtectedRoute>
+                  <ProjectCreate />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/users/create" 
+              element={
+                <ProtectedRoute>
+                  <CreateUser />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </div>
+        <Toaster 
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            style: {
+              background: '#363636',
+              color: '#fff',
+            },
+            success: {
+              duration: 3000,
+              iconTheme: {
+                primary: '#4ade80',
+                secondary: '#fff',
+              },
+            },
+            error: {
+              duration: 5000,
+              iconTheme: {
+                primary: '#ef4444',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </AuthProvider>
     </Router>
   );
 }

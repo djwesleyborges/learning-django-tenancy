@@ -11,6 +11,7 @@ const Header = ({ user, onLogout }: HeaderProps) => {
       <nav className="flex justify-between items-center">
         <div className="nav-links">
           <a href="/projects" className="mr-4 text-blue-600 hover:underline">Projetos</a>
+          <a href="/users/create" className="mr-4 text-green-600 hover:underline">Criar Usuário</a>
           {user && <a href="/profile" className="text-blue-600 hover:underline">Perfil</a>}
         </div>
         <div className="flex items-center gap-4">
